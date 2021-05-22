@@ -1,0 +1,7 @@
+Dear ${PERSON_NAME}, 
+
+${CONTENT}. 
+Have a great day! 
+
+Yours Truly
+${YOUR_NAME}

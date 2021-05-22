@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8"/>
+    <title>Test Report</title>
+    <link href="assets/style.css" rel="stylesheet" type="text/css"/></head>
+  <body onLoad="init()">
+    <script>/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+
+function toArray(iter) {
+    if (iter === null) {
+        return null;
+    }
+    return Array.prototype.slice.call(iter);
+}
+
+function find(selector, elem) { // eslint-disable-line no-redeclare
+    if (!elem) {
+        elem = document;
+    }
+    return elem.querySelector(selector);
+}
+
+function findAll(selector, elem) {
+    if (!elem) {
+        elem = document;
+    }
+    return toArray(elem.querySelectorAll(selector));
+}
+
+function sortColumn(elem) {
+    toggleSortStates(elem);
+    const colIndex = toArray(elem.parentNode.childNodes).indexOf(elem);
+    let key;
+    if (elem.classList.contains('result')) {
+        key = keyResult;
+    } else if (elem.classList.contains('links')) {
+        key = keyLink;
+    } else {
+        key = keyAlpha;
+    }
+    sortTable(elem, key(colIndex));
+}
+
+function showAllExtras() { // eslint-disable-line no-unused-vars
+    findAll('.col-result').forEach(showExtras);
+}
+
+function hideAllExtras() { // eslint-disable-line no-unused-vars
+    findAll('.col-result').forEach(hideExtras);
+}
+
+function showExtras(colresultElem) {
+    const extras = colresultElem.parentNode.nextElementSibling;
+    const expandcollapse = colresultElem.firstElementChild;
+    extras.classList.remove('collapsed');
+    expandcollapse.classList.remove('expander');
+    expandcollapse.classList.add('collapser');
+}
+
+function hideExtras(colresultElem) {
+    const extras = colresultElem.parentNode.nextElementSibling;
+    const expandcollapse = colresultElem.firstElementChild;
+    extras.classList.add('collapsed');
+    expandcollapse.classList.remove('collapser');
+    expandcollapse.classList.add('expander');
+}
+
+function showFilters() {
+    const filterItems = document.getElementsByClassName('filter');
+    for (let i = 0; i < filterItems.length; i++)
+        filterItems[i].hidden = false;
+}
+
+function addCollapse() {
+    // Add links for show/hide all
+    const resulttable = find('table#results-table');
+    const showhideall = document.createElement('p');
+    showhideall.innerHTML = '<a href="javascript:showAllExtras()">Show all details</a> / ' +
+                            '<a href="javascript:hideAllExtras()">Hide all details</a>';
+    resulttable.parentElement.insertBefore(showhideall, resulttable);
+
+    // Add show/hide link to each result
+    findAll('.col-result').forEach(function(elem) {
+        const collapsed = getQueryParameter('collapsed') || 'Passed';
+        const extras = elem.parentNode.nextElementSibling;
+        const expandcollapse = document.createElement('span');
+        if (extras.classList.contains('collapsed')) {
+            expandcollapse.classList.add('expander');
+        } else if (collapsed.includes(elem.innerHTML)) {
+            extras.classList.add('collapsed');
+            expandcollapse.classList.add('expander');
+        } else {
+            expandcollapse.classList.add('collapser');
+        }
+        elem.appendChild(expandcollapse);
+
+        elem.addEventListener('click', function(event) {
+            if (event.currentTarget.parentNode.nextElementSibling.classList.contains('collapsed')) {
+                showExtras(event.currentTarget);
+            } else {
+                hideExtras(event.currentTarget);
+            }
+        });
+    });
+}
+
+function getQueryParameter(name) {
+    const match = RegExp('[?&]' + name + '=([^&]*)').exec(window.location.search);
+    return match && decodeURIComponent(match[1].replace(/\+/g, ' '));
+}
+
+function init () { // eslint-disable-line no-unused-vars
+    resetSortHeaders();
+
+    addCollapse();
+
+    showFilters();
+
+    sortColumn(find('.initial-sort'));
+
+    findAll('.sortable').forEach(function(elem) {
+        elem.addEventListener('click',
+            function() {
+                sortColumn(elem);
+            }, false);
+    });
+}
+
+function sortTable(clicked, keyFunc) {
+    const rows = findAll('.results-table-row');
+    const reversed = !clicked.classList.contains('asc');
+    const sortedRows = sort(rows, keyFunc, reversed);
+    /* Whole table is removed here because browsers acts much slower
+     * when appending existing elements.
+     */
+    const thead = document.getElementById('results-table-head');
+    document.getElementById('results-table').remove();
+    const parent = document.createElement('table');
+    parent.id = 'results-table';
+    parent.appendChild(thead);
+    sortedRows.forEach(function(elem) {
+        parent.appendChild(elem);
+    });
+    document.getElementsByTagName('BODY')[0].appendChild(parent);
+}
+
+function sort(items, keyFunc, reversed) {
+    const sortArray = items.map(function(item, i) {
+        return [keyFunc(item), i];
+    });
+
+    sortArray.sort(function(a, b) {
+        const keyA = a[0];
+        const keyB = b[0];
+
+        if (keyA == keyB) return 0;
+
+        if (reversed) {
+            return keyA < keyB ? 1 : -1;
+        } else {
+            return keyA > keyB ? 1 : -1;
+        }
+    });
+
+    return sortArray.map(function(item) {
+        const index = item[1];
+        return items[index];
+    });
+}
+
+function keyAlpha(colIndex) {
+    return function(elem) {
+        return elem.childNodes[1].childNodes[colIndex].firstChild.data.toLowerCase();
+    };
+}
+
+function keyLink(colIndex) {
+    return function(elem) {
+        const dataCell = elem.childNodes[1].childNodes[colIndex].firstChild;
+        return dataCell == null ? '' : dataCell.innerText.toLowerCase();
+    };
+}
+
+function keyResult(colIndex) {
+    return function(elem) {
+        const strings = ['Error', 'Failed', 'Rerun', 'XFailed', 'XPassed',
+            'Skipped', 'Passed'];
+        return strings.indexOf(elem.childNodes[1].childNodes[colIndex].firstChild.data);
+    };
+}
+
+function resetSortHeaders() {
+    findAll('.sort-icon').forEach(function(elem) {
+        elem.parentNode.removeChild(elem);
+    });
+    findAll('.sortable').forEach(function(elem) {
+        const icon = document.createElement('div');
+        icon.className = 'sort-icon';
+        icon.textContent = 'vvv';
+        elem.insertBefore(icon, elem.firstChild);
+        elem.classList.remove('desc', 'active');
+        elem.classList.add('asc', 'inactive');
+    });
+}
+
+function toggleSortStates(elem) {
+    //if active, toggle between asc and desc
+    if (elem.classList.contains('active')) {
+        elem.classList.toggle('asc');
+        elem.classList.toggle('desc');
+    }
+
+    //if inactive, reset all other functions and add ascending active
+    if (elem.classList.contains('inactive')) {
+        resetSortHeaders();
+        elem.classList.remove('inactive');
+        elem.classList.add('active');
+    }
+}
+
+function isAllRowsHidden(value) {
+    return value.hidden == false;
+}
+
+function filterTable(elem) { // eslint-disable-line no-unused-vars
+    const outcomeAtt = 'data-test-result';
+    const outcome = elem.getAttribute(outcomeAtt);
+    const classOutcome = outcome + ' results-table-row';
+    const outcomeRows = document.getElementsByClassName(classOutcome);
+
+    for(let i = 0; i < outcomeRows.length; i++){
+        outcomeRows[i].hidden = !elem.checked;
+    }
+
+    const rows = findAll('.results-table-row').filter(isAllRowsHidden);
+    const allRowsHidden = rows.length == 0 ? true : false;
+    const notFoundMessage = document.getElementById('not-found-message');
+    notFoundMessage.hidden = !allRowsHidden;
+}
+</script>
+    <h1>report.html</h1>
+    <p>Report generated on 26-Apr-2021 at 17:05:38 by <a href="https://pypi.python.org/pypi/pytest-html">pytest-html</a> v3.1.1</p>
+    <h2>Environment</h2>
+    <table id="environment">
+      <tr>
+        <td>Packages</td>
+        <td>{"pluggy": "0.13.1", "py": "1.10.0", "pytest": "6.2.3"}</td></tr>
+      <tr>
+        <td>Platform</td>
+        <td>macOS-10.16-x86_64-i386-64bit</td></tr>
+      <tr>
+        <td>Plugins</td>
+        <td>{"html": "3.1.1", "metadata": "1.11.0"}</td></tr>
+      <tr>
+        <td>Python</td>
+        <td>3.9.4</td></tr></table>
+    <h2>Summary</h2>
+    <p>12 tests ran in 18.72 seconds. </p>
+    <p class="filter" hidden="true">(Un)check the boxes to filter the results.</p><input checked="true" class="filter" data-test-result="passed" hidden="true" name="filter_checkbox" onChange="filterTable(this)" type="checkbox"/><span class="passed">12 passed</span>, <input checked="true" class="filter" data-test-result="skipped" disabled="true" hidden="true" name="filter_checkbox" onChange="filterTable(this)" type="checkbox"/><span class="skipped">0 skipped</span>, <input checked="true" class="filter" data-test-result="failed" disabled="true" hidden="true" name="filter_checkbox" onChange="filterTable(this)" type="checkbox"/><span class="failed">0 failed</span>, <input checked="true" class="filter" data-test-result="error" disabled="true" hidden="true" name="filter_checkbox" onChange="filterTable(this)" type="checkbox"/><span class="error">0 errors</span>, <input checked="true" class="filter" data-test-result="xfailed" disabled="true" hidden="true" name="filter_checkbox" onChange="filterTable(this)" type="checkbox"/><span class="xfailed">0 expected failures</span>, <input checked="true" class="filter" data-test-result="xpassed" disabled="true" hidden="true" name="filter_checkbox" onChange="filterTable(this)" type="checkbox"/><span class="xpassed">0 unexpected passes</span>
+    <h2>Results</h2>
+    <table id="results-table">
+      <thead id="results-table-head">
+        <tr>
+          <th class="sortable result initial-sort" col="result">Result</th>
+          <th class="sortable" col="name">Test</th>
+          <th class="sortable" col="duration">Duration</th>
+          <th class="sortable links" col="links">Links</th></tr>
+        <tr hidden="true" id="not-found-message">
+          <th colspan="4">No results found. Try to check the filters</th></tr></thead>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">NormalConnection_test.py::test_insert_get_wiki</td>
+          <td class="col-duration">1.73</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>[{&#x27;_id&#x27;: ObjectId(&#x27;6087554018ec3a56c81590df&#x27;),
+  &#x27;description&#x27;: &#x27;We are farmers&#x27;,
+  &#x27;keyword&#x27;: &#x27;Farmers&#x27;,
+  &#x27;timeStamp&#x27;: datetime.datetime(2021, 4, 27, 0, 5, 20, 127000)},
+ {&#x27;_id&#x27;: ObjectId(&#x27;6087551e02f114d31782452c&#x27;),
+  &#x27;description&#x27;: &#x27;We are farmers&#x27;,
+  &#x27;keyword&#x27;: &#x27;Farmers&#x27;,
+  &#x27;timeStamp&#x27;: datetime.datetime(2021, 4, 27, 0, 4, 46, 855000)}]
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">NormalConnection_test.py::test_insert_get_search</td>
+          <td class="col-duration">1.69</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>[{&#x27;_id&#x27;: ObjectId(&#x27;6087554118ec3a56c81590e2&#x27;),
+  &#x27;description&#x27;: &#x27;We are farmers&#x27;,
+  &#x27;keyword&#x27;: &#x27;Farmers&#x27;,
+  &#x27;timeStamp&#x27;: datetime.datetime(2021, 4, 27, 0, 5, 21, 795000)},
+ {&#x27;_id&#x27;: ObjectId(&#x27;6087552002f114d31782452f&#x27;),
+  &#x27;description&#x27;: &#x27;We are farmers&#x27;,
+  &#x27;keyword&#x27;: &#x27;Farmers&#x27;,
+  &#x27;timeStamp&#x27;: datetime.datetime(2021, 4, 27, 0, 4, 48, 492000)}]
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">NormalConnection_test.py::test_insert_get_web</td>
+          <td class="col-duration">2.57</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>[{&#x27;_id&#x27;: ObjectId(&#x27;6087554418ec3a56c81590e7&#x27;),
+  &#x27;keyword&#x27;: &#x27;www.dummy-developers.in&#x27;,
+  &#x27;timeStamp&#x27;: datetime.datetime(2021, 4, 27, 0, 5, 24, 353000)},
+ {&#x27;_id&#x27;: ObjectId(&#x27;6087554318ec3a56c81590e5&#x27;),
+  &#x27;keyword&#x27;: &#x27;www.dummy-developers.com&#x27;,
+  &#x27;timeStamp&#x27;: datetime.datetime(2021, 4, 27, 0, 5, 23, 489000)},
+ {&#x27;_id&#x27;: ObjectId(&#x27;6087552302f114d317824534&#x27;),
+  &#x27;keyword&#x27;: &#x27;www.dummy-developers.in&#x27;,
+  &#x27;timeStamp&#x27;: datetime.datetime(2021, 4, 27, 0, 4, 51, 46000)}]
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">NormalConnection_test.py::test_insert_get_news</td>
+          <td class="col-duration">2.54</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>[{&#x27;_id&#x27;: ObjectId(&#x27;6087554618ec3a56c81590ec&#x27;),
+  &#x27;keyword&#x27;: &#x27;IPL&#x27;,
+  &#x27;timeStamp&#x27;: datetime.datetime(2021, 4, 27, 0, 5, 26, 919000)},
+ {&#x27;_id&#x27;: ObjectId(&#x27;6087554618ec3a56c81590ea&#x27;),
+  &#x27;keyword&#x27;: &#x27;Champions League&#x27;,
+  &#x27;timeStamp&#x27;: datetime.datetime(2021, 4, 27, 0, 5, 26, 69000)},
+ {&#x27;_id&#x27;: ObjectId(&#x27;6087552502f114d317824539&#x27;),
+  &#x27;keyword&#x27;: &#x27;IPL&#x27;,
+  &#x27;timeStamp&#x27;: datetime.datetime(2021, 4, 27, 0, 4, 53, 651000)}]
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">NormalConnection_test.py::test_insert_get_youtube</td>
+          <td class="col-duration">4.64</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>{&#x27;_id&#x27;: ObjectId(&#x27;6087552802f114d31782453c&#x27;),
+ &#x27;count&#x27;: 4,
+ &#x27;keyword&#x27;: &#x27;video1&#x27;,
+ &#x27;timeStamp&#x27;: datetime.datetime(2021, 4, 27, 0, 4, 56, 228000)}
+{&#x27;_id&#x27;: ObjectId(&#x27;6087552802f114d31782453c&#x27;),
+ &#x27;count&#x27;: 5,
+ &#x27;keyword&#x27;: &#x27;video1&#x27;,
+ &#x27;timeStamp&#x27;: datetime.datetime(2021, 4, 27, 0, 4, 56, 228000)}
+{&#x27;_id&#x27;: ObjectId(&#x27;6087552802f114d31782453c&#x27;),
+ &#x27;count&#x27;: 6,
+ &#x27;keyword&#x27;: &#x27;video1&#x27;,
+ &#x27;timeStamp&#x27;: datetime.datetime(2021, 4, 27, 0, 4, 56, 228000)}
+{&#x27;_id&#x27;: ObjectId(&#x27;6087552802f114d31782453c&#x27;),
+ &#x27;count&#x27;: 7,
+ &#x27;keyword&#x27;: &#x27;video1&#x27;,
+ &#x27;timeStamp&#x27;: datetime.datetime(2021, 4, 27, 0, 4, 56, 228000)}
+[{&#x27;_id&#x27;: ObjectId(&#x27;6087552802f114d31782453c&#x27;),
+  &#x27;count&#x27;: 8,
+  &#x27;keyword&#x27;: &#x27;video1&#x27;,
+  &#x27;timeStamp&#x27;: datetime.datetime(2021, 4, 27, 0, 4, 56, 228000)}]
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">SecureConnection_test.py::test_insert_get_message</td>
+          <td class="col-duration">1.33</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>&lt;pymongo.results.InsertOneResult object at 0x7f9a13486100&gt;
+[{&#x27;_id&#x27;: ObjectId(&#x27;6087554d18ec3a56c81590f3&#x27;),
+  &#x27;content&#x27;: &#x27;Hey there!!&#x27;,
+  &#x27;number&#x27;: &#x27;7252189336&#x27;,
+  &#x27;reciever&#x27;: &#x27;Natasha&#x27;,
+  &#x27;timeStamp&#x27;: datetime.datetime(2021, 4, 27, 0, 5, 33, 266000)},
+ {&#x27;_id&#x27;: ObjectId(&#x27;6087552c02f114d317824541&#x27;),
+  &#x27;content&#x27;: &#x27;Hey there!!&#x27;,
+  &#x27;number&#x27;: &#x27;7252189336&#x27;,
+  &#x27;reciever&#x27;: &#x27;Natasha&#x27;,
+  &#x27;timeStamp&#x27;: datetime.datetime(2021, 4, 27, 0, 4, 59, 999000)}]
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">SecureConnection_test.py::test_insert_get_email</td>
+          <td class="col-duration">0.40</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>[{&#x27;_id&#x27;: ObjectId(&#x27;6087554e18ec3a56c81590f4&#x27;),
+  &#x27;content&#x27;: &#x27;Hey there!!&#x27;,
+  &#x27;reciever&#x27;: &#x27;Annie&#x27;,
+  &#x27;sender&#x27;: &#x27;Natasha&#x27;,
+  &#x27;subject&#x27;: &#x27;First Email&#x27;,
+  &#x27;timeStamp&#x27;: datetime.datetime(2021, 4, 27, 0, 5, 34, 599000)},
+ {&#x27;_id&#x27;: ObjectId(&#x27;6087552d02f114d317824542&#x27;),
+  &#x27;content&#x27;: &#x27;Hey there!!&#x27;,
+  &#x27;reciever&#x27;: &#x27;Annie&#x27;,
+  &#x27;sender&#x27;: &#x27;Natasha&#x27;,
+  &#x27;subject&#x27;: &#x27;First Email&#x27;,
+  &#x27;timeStamp&#x27;: datetime.datetime(2021, 4, 27, 0, 5, 1, 357000)}]
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">SecureConnection_test.py::test_insert_get_note_true</td>
+          <td class="col-duration">0.41</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>[{&#x27;_id&#x27;: ObjectId(&#x27;6087554f18ec3a56c81590f5&#x27;),
+  &#x27;content&#x27;: &#x27;Call Natasha&#x27;,
+  &#x27;timeStamp&#x27;: datetime.datetime(2021, 4, 27, 0, 5, 35, 6000),
+  &#x27;title&#x27;: &#x27;First Note&#x27;,
+  &#x27;todo&#x27;: True},
+ {&#x27;_id&#x27;: ObjectId(&#x27;6087552e02f114d317824546&#x27;),
+  &#x27;content&#x27;: &#x27;Call Natasha&#x27;,
+  &#x27;timeStamp&#x27;: datetime.datetime(2021, 4, 27, 0, 5, 2, 416000),
+  &#x27;title&#x27;: &#x27;First Note&#x27;,
+  &#x27;todo&#x27;: True},
+ {&#x27;_id&#x27;: ObjectId(&#x27;6087552d02f114d317824543&#x27;),
+  &#x27;content&#x27;: &#x27;Call Natasha&#x27;,
+  &#x27;timeStamp&#x27;: datetime.datetime(2021, 4, 27, 0, 5, 1, 802000),
+  &#x27;title&#x27;: &#x27;First Note&#x27;,
+  &#x27;todo&#x27;: True}]
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">SecureConnection_test.py::test_insert_get_note_false</td>
+          <td class="col-duration">0.41</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>[{&#x27;_id&#x27;: ObjectId(&#x27;6087554f18ec3a56c81590f7&#x27;),
+  &#x27;content&#x27;: &#x27;Call Natasha again&#x27;,
+  &#x27;timeStamp&#x27;: datetime.datetime(2021, 4, 27, 0, 5, 35, 427000),
+  &#x27;title&#x27;: &#x27;Second Note&#x27;,
+  &#x27;todo&#x27;: False},
+ {&#x27;_id&#x27;: ObjectId(&#x27;6087554f18ec3a56c81590f6&#x27;),
+  &#x27;content&#x27;: &#x27;Call Natasha again&#x27;,
+  &#x27;timeStamp&#x27;: datetime.datetime(2021, 4, 27, 0, 5, 35, 176000),
+  &#x27;title&#x27;: &#x27;Second Note&#x27;,
+  &#x27;todo&#x27;: False},
+ {&#x27;_id&#x27;: ObjectId(&#x27;6087552e02f114d317824545&#x27;),
+  &#x27;content&#x27;: &#x27;Call Natasha again&#x27;,
+  &#x27;timeStamp&#x27;: datetime.datetime(2021, 4, 27, 0, 5, 2, 253000),
+  &#x27;title&#x27;: &#x27;Second Note&#x27;,
+  &#x27;todo&#x27;: False}]
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">SecureConnection_test.py::test_insert_get_weather</td>
+          <td class="col-duration">0.25</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>&lt;pymongo.results.InsertOneResult object at 0x7f9a1342e680&gt;
+[{&#x27;_id&#x27;: ObjectId(&#x27;6087554f18ec3a56c81590f9&#x27;),
+  &#x27;desc&#x27;: &#x27;scattered clouds&#x27;,
+  &#x27;location&#x27;: &#x27;Barcelona&#x27;,
+  &#x27;temp&#x27;: 89.5,
+  &#x27;timeStamp&#x27;: datetime.datetime(2021, 4, 27, 0, 5, 35, 848000),
+  &#x27;weather&#x27;: &#x27;Clouds&#x27;},
+ {&#x27;_id&#x27;: ObjectId(&#x27;6087552e02f114d317824547&#x27;),
+  &#x27;desc&#x27;: &#x27;scattered clouds&#x27;,
+  &#x27;location&#x27;: &#x27;Barcelona&#x27;,
+  &#x27;temp&#x27;: 89.5,
+  &#x27;timeStamp&#x27;: datetime.datetime(2021, 4, 27, 0, 5, 2, 671000),
+  &#x27;weather&#x27;: &#x27;Clouds&#x27;}]
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">VoiceAuth_test.py::test_create_user</td>
+          <td class="col-duration">0.42</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stdout call------------------------------ <br/>{&#x27;createdAt&#x27;: 1619481937000, &#x27;timeTaken&#x27;: &#x27;0.016s&#x27;, &#x27;message&#x27;: &#x27;Created user with userId : usr_307acf5ca3e54b56a65fdf762819113f&#x27;, &#x27;userId&#x27;: &#x27;usr_307acf5ca3e54b56a65fdf762819113f&#x27;, &#x27;responseCode&#x27;: &#x27;SUCC&#x27;, &#x27;status&#x27;: 201}
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">VoiceDB_test.py::test_insert_get</td>
+          <td class="col-duration">1.70</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody></table></body></html>
