@@ -2,11 +2,14 @@
 voice assistant based on Python language that protects your privacy
 
 Connection: Connect with VoiceIt.io API for a wake word and identity verification via voice verification. 
+
 Database: MongoDB cloud
+
 Encryption: 
 Due to budget constraint, we used free version of MongoDB cloud which does not support automatic encryption. To work around this, we encrypt the data via the client side first before storing in MongoDB cloud. However free version of MongoDB will automatically decrypt the data.
 None encrypted data goes through ‘NormalConnection.py’ and then store in MongoDB cloud without encryption.
 Encrypted data goes through ‘SecureConnection.py’. The data gets encrypted and store in MongoDB cloud with encryption.
+
 Voice assistant functions:
 Due to time and skills constraints, we created noncomplex functions for this artefact to show how these can be connected and use with some of data categorizations mentioned in the research findings section.
 Ask for time function: we generate time result without storing any data.
