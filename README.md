@@ -1,4 +1,40 @@
 # voice-assistant
+
+Getting Started with voice assisstant - 
+
+1. Data Key - master key to generate field encryption/decryption keys
+   
+   1. Run localkey.py 
+   2. It will create master-key.txt 
+
+For the first time - 
+   1. Run make_data_key.py
+   2. Copy the console output to the clipboard
+   3. In SecureConnection.py, uncomment the line 35 and put the key there and comment the line 38
+
+Later on - 
+   1. Comment the line 35 and uncomment the line 38
+
+
+2. VoiceIt2 
+
+   1. Put your api key and token in line 4 and 5 in VoiceAuth.py
+   2. Write a phrase which will be used for registration and verification in line 9
+
+3. Atlas Connection String - 
+
+   1. Place your atlas connection string at line 3 in Database.py and at line 12 in SecureConnection.py
+
+4. Run schema.py
+
+
+Command to run tests - 
+
+   Change directory to your src directory
+   1.$pytest
+
+   To generate a report
+   1.$pytest --html=report.html
 voice assistant based on Python language that protects your privacy
 
 Connection: Connect with VoiceIt.io API for a wake word and identity verification via voice verification. 
