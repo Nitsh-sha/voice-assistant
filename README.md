@@ -86,7 +86,7 @@ Password generator function: No data is stored.
 
 ## Preview
 
-Please php document for preview and detailed report.
+Please click on the document for preview and detailed report.
 
 **[View PDF document](https://drive.google.com/file/d/1HukmNaTNdQQTSgaCITkCQor9IJZvRQHK/view?usp=sharing)**
 
