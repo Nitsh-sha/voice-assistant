@@ -1,4 +1,6 @@
-# voice-assistant
+# Privacy-protected Smart Personal Assistants in Python
+
+Please refer to the full documentation in the PDF file at the bottom
 
 Getting Started with voice assisstant - 
 
@@ -80,3 +82,12 @@ Take notes function: We store title (not encrypted), note content (encrypted), m
 Do to list function: Retrieving any notes marked as todo.
 
 Password generator function: No data is stored.
+
+
+## Preview
+
+Please php document for preview and detailed report.
+
+**[View PDF document](https://drive.google.com/file/d/1HukmNaTNdQQTSgaCITkCQor9IJZvRQHK/view?usp=sharing)**
+
+
